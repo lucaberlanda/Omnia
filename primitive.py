@@ -8,6 +8,7 @@ from log_colors import bcolors as bc
 
 
 def exception_handler(func):
+
     def inner_function(*args, **kwargs):
 
         try:
