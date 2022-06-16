@@ -71,12 +71,18 @@ class Stats:
         # TODO m percentage
         return self.rets.apply(lambda x: TailRisk.compute_hill_estimator(x, m=m))
 
-    def max_dd(self, rolling=False, window=60, min_p=60):
+    def max_dd(self, rolling=False, logs=False, window=60, min_p=60):
         if rolling:
-            dd = self.ts.rolling(window=window, min_periods=min_p).apply(lambda x: orm.drawdown(x))
-            return dd
+            # Calculate the max drawdown in the past window days for each day in the series.
+            running_dd = self.ts / self.ts.rolling(window, min_periods=min_p).max() - 1
+
+            if logs:
+                running_dd = np.log(running_dd + 1)
+
+            dd = running_dd.rolling(window, min_periods=1).min()
+            return running_dd, dd
         else:
-            all_data = self.ts.apply(lambda x: orm.drawdown(x, True)).T
+            all_data = self.ts.apply(lambda x: orm.drawdown(x, also_dates=True)).T
             all_data.columns = ['drawdown', 'start_date', 'end_date']
             dd = all_data.loc[:, 'drawdown']
             st = all_data.loc[:, 'start_date']
@@ -100,19 +106,20 @@ class Stats:
 
     def calmar_ratio(self, apply_israelsen=True, rolling=False, window=60, min_p=60):
         if rolling:
-            rets = self.rets().rolling(window=window, min_periods=min_p).mean()
-            dd = self.max_dd(rolling=True, window=window, min_p=min_p)
+            rets = self.ts.rolling(window=window).apply(lambda  x: core.annualized_ret(x))
+            dd = self.max_dd(rolling=True, window=window, min_p=min_p)[1]
+
         else:
             rets = core.annualized_ret(self.ts)
             dd, _, _ = self.max_dd()
 
         if apply_israelsen:
             if isinstance(rets, pd.DataFrame):
-                return rets.apply(lambda cols: core.apply_israelsen(cols, dd.loc[:, cols.name]))
+                return rets.apply(lambda cols: core.apply_israelsen(cols, abs(dd).loc[:, cols.name]))
             else:
-                return rets / dd
+                return rets / abs(dd)
         else:
-            return rets / dd
+            return rets / abs(dd)
 
     def sortino_ratio(self, threshold=0, rolling=False, window=60, min_p=60):
         if rolling:
