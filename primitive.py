@@ -8,7 +8,6 @@ from log_colors import bcolors as bc
 
 
 def exception_handler(func):
-
     def inner_function(*args, **kwargs):
 
         try:
@@ -138,3 +137,34 @@ def normalize_signal(df, how='expanding', **kwargs):
     from scipy.stats import logistic
     signal = pd.DataFrame(logistic.cdf(z_score), index=df.index, columns=df.columns)
     return signal
+
+
+def compute_tstat(returns: pd.Series, print_=False):
+    """
+    Computed on log returns you get have the geometric average t-stat
+    :param returns:
+    :param print_:
+    :return:
+    """
+    import numpy as np
+    from scipy.stats import ttest_1samp
+
+    # Assuming your stock returns are stored in a numpy array called 'returns'
+    # Calculate sample mean and standard deviation
+    mean_return = np.mean(returns)
+    std_dev = np.std(returns)
+
+    # Number of observations
+    n = len(returns)
+
+    # Calculate t-statistic
+    t_statistic = (mean_return - 0) / (std_dev / np.sqrt(n))
+
+    # Calculate p-value
+    p_value = ttest_1samp(returns, 0)[1]
+
+    if print_:
+        print("T-statistic:", t_statistic)
+        print("P-value:", p_value)
+
+    return t_statistic, p_value
