@@ -23,7 +23,7 @@ def exception_handler(func):
     return inner_function
 
 
-def rebase_at_x(df, at=100):
+def rebase(df, at=100):
     if type(df) == pd.Series:
         df = df.dropna()
         df = df / df.iloc[0] * at
